@@ -2,8 +2,8 @@
 // @name            Floating Sidebar
 // @description     Lightweight script to, make firefox Sidebar Floating also option to pin/unpin the sidebar.
 // @author          Bibek Bhusal
-// @version         1.1.1b
-// @lastUpdated     2026-01-15
+// @version         1.1.2b
+// @lastUpdated     2026-01-16
 // @ignorecache
 // @homepage        https://github.com/Vertex-Mods/Floating-Sidebar
 // ==/UserScript==
