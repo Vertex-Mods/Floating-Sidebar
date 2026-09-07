@@ -2,8 +2,8 @@
 // @name            Floating Sidebar
 // @description     Lightweight script to, make firefox Sidebar Floating also option to pin/unpin the sidebar.
 // @author          Bibek Bhusal
-// @version         1.1.2
-// @lastUpdated     2026-01-24
+// @version         1.1.3
+// @lastUpdated     2026-09-07
 // @ignorecache
 // @homepage        https://github.com/Vertex-Mods/Floating-Sidebar
 // ==/UserScript==
@@ -13,114 +13,92 @@
 // To make changes, please edit the source files in the repository:
 // https://github.com/BibekBhusal0/zen-custom-js
 
-(function (factory) {
-  typeof define === 'function' && define.amd ? define(factory) :
-  factory();
-})((function () { 'use strict';
+(() => {
 
+  // utils/startup-finish.js
   function startupFinish(callback) {
-    if (document.readyState === "complete") callback();
-    else window.addEventListener("load", callback, { once: true });
+    if (document.readyState === "complete")
+      callback();
+    else
+      window.addEventListener("load", callback, { once: !0 });
   }
 
-  const parseElement = (elementString, type = "html") => {
-    if (type === "xul") {
+  // utils/parse.js
+  var parseElement = (elementString, type = "html") => {
+    if (type === "xul")
       return window.MozXULElement.parseXULToFragment(elementString).firstChild;
-    }
-
     let element = new DOMParser().parseFromString(elementString, "text/html");
-    if (element.body.children.length) element = element.body.firstChild;
-    else element = element.head.firstChild;
+    if (element.body.children.length)
+      element = element.body.firstChild;
+    else
+      element = element.head.firstChild;
     return element;
+  }, escapeXmlAttribute = (str) => {
+    if (typeof str !== "string")
+      return str;
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
   };
 
-  const escapeXmlAttribute = (str) => {
-    if (typeof str !== "string") return str;
-    return str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&apos;");
-  };
+  // utils/icon.js
+  var svgToUrl = (iconSVG) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(iconSVG)}`;
 
-  const svgToUrl = (iconSVG) => {
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(iconSVG)}`;
-  };
-
-  const icons = {
-    pin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="context-fill light-dark(black, white)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4a1 1 0 0 1 1 1z"/></svg>`,
-    unpin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="context-fill light-dark(black, white)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 17v5m3-12.66V7a1 1 0 0 1 1-1a2 2 0 0 0 0-4H7.89M2 2l20 20M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h11"/></svg>`};
-
+  // utils/pref.js
   function setPref(key, value) {
     try {
-      const prefService = Services.prefs;
-      if (typeof value === "boolean") {
+      let prefService = Services.prefs;
+      if (typeof value === "boolean")
         prefService.setBoolPref(key, value);
-      } else if (typeof value === "number") {
+      else if (typeof value === "number")
         prefService.setIntPref(key, value);
-      } else {
+      else
         prefService.setStringPref(key, value);
-      }
-    } catch {
-      //ignore
-    }
+    } catch {}
   }
-
-  const getPref = (key, defaultValue) => {
+  var getPref = (key, defaultValue) => {
     try {
-      const prefService = Services.prefs;
-      if (prefService.prefHasUserValue(key)) {
-        switch (prefService.getPrefType(key)) {
-          case prefService.PREF_STRING:
-            return prefService.getStringPref(key);
-          case prefService.PREF_INT:
-            return prefService.getIntPref(key);
-          case prefService.PREF_BOOL:
-            return prefService.getBoolPref(key);
-        }
-      }
+      let prefService = Services.prefs, type = prefService.getPrefType(key);
+      if (type === prefService.PREF_STRING)
+        return prefService.getStringPref(key);
+      else if (type === prefService.PREF_INT)
+        return prefService.getIntPref(key);
+      else if (type === prefService.PREF_BOOL)
+        return prefService.getBoolPref(key);
+      return defaultValue;
     } catch {
       return defaultValue;
     }
-    return defaultValue;
   };
-
   function addPrefListener(name, callback) {
-    const modified_callback = () => {
+    let modified_callback = () => {
       callback({ value: getPref(name) });
     };
-    Services.prefs.addObserver(name, modified_callback);
-    return { name, callback };
+    return Services.prefs.addObserver(name, modified_callback), { name, callback };
   }
 
+  // floating-sidebar/index.js
+  var icons = {
+    pin: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="context-fill light-dark(black, white)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4a1 1 0 0 1 1 1z"/></svg>',
+    unpin: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="context-fill light-dark(black, white)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 17v5m3-12.66V7a1 1 0 0 1 1-1a2 2 0 0 0 0-4H7.89M2 2l20 20M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h11"/></svg>'
+  };
   function addButton() {
-    if (document.getElementById("sidebar-pin-unpin")) return;
-
-    const header = document.getElementById("sidebar-header");
-
-    if (!header) return;
-    const button = parseElement(`<toolbarbutton id="sidebar-pin-unpin"/>`, "xul");
-    const PREF_KEY = "extension.sidebar-float";
-    const floating = () => getPref(PREF_KEY, false);
+    if (document.getElementById("sidebar-pin-unpin"))
+      return;
+    let header = document.getElementById("sidebar-header");
+    if (!header)
+      return;
+    let button = parseElement('<toolbarbutton id="sidebar-pin-unpin"/>', "xul"), PREF_KEY = "extension.sidebar-float", floating = () => getPref(PREF_KEY, !1);
     function updateImage() {
-      const icon = floating() ? icons["pin"] : icons["unpin"];
+      let icon = floating() ? icons.pin : icons.unpin;
       button.setAttribute("image", escapeXmlAttribute(svgToUrl(icon)));
     }
-    updateImage();
-    addPrefListener(PREF_KEY, updateImage);
-
-    const buttonClick = () => setPref(PREF_KEY, !floating());
-
+    updateImage(), addPrefListener(PREF_KEY, updateImage);
+    let buttonClick = () => setPref(PREF_KEY, !floating());
     button.addEventListener("click", buttonClick);
-    const children = header.children;
-    if (children.length > 1) {
+    let children = header.children;
+    if (children.length > 1)
       header.insertBefore(button, children[children.length - 1]);
-    } else {
+    else
       header.appendChild(button);
-    }
   }
-
   startupFinish(addButton);
-
-}));
+})();
